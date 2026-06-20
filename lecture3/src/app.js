@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const uploadFile = require('../services/storage.service');
+const postModel = require('./models/postSchema');
 const app = express()
 app.use(express.json());
 
@@ -13,8 +14,26 @@ app.post("/create-post", upload.single("image"), async(req, res) => {
 
     const response = await uploadFile(req.file.buffer)
 
-    console.log(response)
+    const post = await postModel.create({
+        image: response.url,
+        caption: req.body.caption
+    })
+
+    return res.status(201).json({
+        message: "post created Succesfully ..!",
+        post
+    })
 })
 
+
+app.get("/post", async(req, res) => {
+
+    const post = await postModel.find()
+
+    return res.status(200).json({
+        message: "post is retirve Succesfully ..",
+        post
+    })
+})
 
 module.exports = app;

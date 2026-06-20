@@ -1,5 +1,5 @@
 {
-  "name": "lecture3",
+  "name": "lecture4",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,10 +11,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@imagekit/nodejs": "^7.7.0",
+    "cookieparser": "^0.1.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mongoose": "^9.7.0",
-    "multer": "^2.2.0"
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.7.1"
   }
 }
