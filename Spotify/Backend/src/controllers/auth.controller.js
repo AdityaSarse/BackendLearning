@@ -48,6 +48,68 @@ async function registerUser(req, res) {
     })
 }
 
+
+async function loginUser(req, res) {
+    const {
+        email,
+        password
+    } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({
+            message: "All fields are required"
+        })
+    }
+
+    const user = await userModel.findOne({
+        email
+    })
+
+    if (!user) {
+        return res.status(401).json({
+            message: "User not found"
+        })
+    }
+
+    const isPasswordValid = await bcryptjs.compare(password, user.password)
+
+    if (!isPasswordValid) {
+        return res.status(401).json({
+            message: "Invalid password"
+        })
+    }
+
+    const token = JWT.sign({
+        id: user._id,
+        role: user.role
+    }, process.env.JWT_SECRET)
+
+    res.cookie("token", token)
+
+    res.status(200).json({
+        message: "Login successful",
+        user: {
+            id: user._id,
+            userName: user.userName,
+            email: user.email,
+            role: user.role
+        }
+    })
+}
+
+async function logoutUser(req, res) {
+    try {
+
+    } catch (error) {
+
+    }
+
+    return res.status(200).json({
+        message: "Logout successful"
+    })
+}
 module.exports = {
-    registerUser
+    registerUser,
+    loginUser,
+    logoutUser
 }
