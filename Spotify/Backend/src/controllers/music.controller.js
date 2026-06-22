@@ -81,7 +81,10 @@ async function createAlbum(req, res) {
 
 async function getMusic(req, res) {
     try {
-        const music = await musicModel.find().populate("artist", "userName email");
+        const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+        const music = await musicModel.find()
+            .populate("artist", "userName email")
+            .limit(limit);
         return res.status(200).json({
             message: "Music retrieved successfully",
             music
@@ -97,9 +100,11 @@ async function getMusic(req, res) {
 
 async function getAllAlbums(req, res) {
     try {
+        const limit = req.query.limit ? parseInt(req.query.limit) : 10;
         const albums = await albumModel.find()
             .populate("artist", "userName email")
-            .populate("musics");
+            .populate("musics")
+            .limit(limit);
         return res.status(200).json({
             message: "Albums retrieved successfully",
             albums
