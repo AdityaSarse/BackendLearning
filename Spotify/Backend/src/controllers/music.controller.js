@@ -5,32 +5,7 @@ const bcryptjs = require("bcryptjs");
 const storageService = require("../services/storage.service");
 const albumModel = require("../models/album.model");
 
-
 async function uploadMusic(req, res) {
-
-
-    const token = req.cookies.token;
-    if (!token) {
-        return res.status(403).json({
-            message: "Please login first"
-        })
-    }
-
-    let decoded;
-    try {
-        decoded = JWT.verify(token, process.env.JWT_SECRET);
-
-        if (decoded.role !== "artist") {
-            return res.status(403).json({
-                message: "You are not authorized to upload music"
-            })
-        }
-    } catch (error) {
-        return res.status(403).json({
-            message: "Invalid token"
-        })
-    }
-
     const {
         title,
         album,
@@ -55,7 +30,7 @@ async function uploadMusic(req, res) {
 
         const music = await musicModel.create({
             title,
-            artist: decoded.id,
+            artist: req.user.id,
             album,
             genre,
             duration,
@@ -74,33 +49,9 @@ async function uploadMusic(req, res) {
             error: error.message
         })
     }
-
 }
 
 async function createAlbum(req, res) {
-
-    const token = req.cookies.token;
-    if (!token) {
-        return res.status(403).json({
-            message: "Please login first"
-        })
-    }
-
-    let decoded;
-    try {
-        decoded = JWT.verify(token, process.env.JWT_SECRET);
-
-        if (decoded.role !== "artist") {
-            return res.status(403).json({
-                message: "You are not authorized to create album"
-            })
-        }
-    } catch (error) {
-        return res.status(403).json({
-            message: "Invalid token"
-        })
-    }
-
     const { name } = req.body;
     if (!name) {
         return res.status(400).json({
@@ -112,9 +63,8 @@ async function createAlbum(req, res) {
     try {
         album = await albumModel.create({
             name: req.body.name,
-            artist: decoded.id,
+            artist: req.user.id,
         })
-
     } catch (error) {
         console.error(error);
         return res.status(500).json({
@@ -128,7 +78,25 @@ async function createAlbum(req, res) {
         album
     })
 }
+
+async function getMusic(req, res) {
+    try {
+        const music = await musicModel.find().populate("artist", "userName email");
+        return res.status(200).json({
+            message: "Music retrieved successfully",
+            music
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: "Internal server error during fetching music",
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     uploadMusic,
-    createAlbum
+    createAlbum,
+    getMusic
 }
