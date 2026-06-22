@@ -95,8 +95,27 @@ async function getMusic(req, res) {
     }
 }
 
+async function getAllAlbums(req, res) {
+    try {
+        const albums = await albumModel.find()
+            .populate("artist", "userName email")
+            .populate("musics");
+        return res.status(200).json({
+            message: "Albums retrieved successfully",
+            albums
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            message: "Internal server error during fetching albums",
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     uploadMusic,
     createAlbum,
-    getMusic
+    getMusic,
+    getAllAlbums
 }
