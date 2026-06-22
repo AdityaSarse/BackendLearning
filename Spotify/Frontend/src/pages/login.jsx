@@ -3,20 +3,20 @@ import { Link } from 'react-router-dom';
 export default function Login() {
   return (
     <div className="relative min-h-screen w-full bg-spotify-dark overflow-hidden flex items-center justify-center font-sans">
-      
+
       {/* Background Visualizer Glow Elements */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-spotify-green/10 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[160px] pointer-events-none"></div>
-      
+
       {/* Main Container */}
       <div className="w-full max-w-[480px] p-6 relative">
-        
+
         {/* Header */}
         <div className="flex flex-col items-center gap-2 mb-8 select-none">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-spotify-green rounded-full flex items-center justify-center shadow-lg">
               <svg className="w-5 h-5 text-black" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.436-5.305-1.762-8.786-.968-.335.076-.668-.135-.744-.47-.077-.335.136-.668.471-.744 3.813-.872 7.075-.494 9.709 1.116.294.18.385.563.207.859zm1.224-2.72c-.226.367-.707.487-1.074.261-2.688-1.65-6.786-2.132-9.962-1.168-.413.125-.847-.107-.972-.52-.125-.413.107-.847.52-.972 3.633-1.102 8.147-.565 11.227 1.328.367.226.49.707.261 1.071zm.107-2.822C14.372 8.788 8.52 8.594 5.132 9.622c-.52.158-1.07-.138-1.228-.658-.158-.52.139-1.07.659-1.228 3.896-1.182 10.366-.957 14.453 1.47.47.278.625.889.347 1.359-.278.47-.889.625-1.359.347z"/>
+                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.436-5.305-1.762-8.786-.968-.335.076-.668-.135-.744-.47-.077-.335.136-.668.471-.744 3.813-.872 7.075-.494 9.709 1.116.294.18.385.563.207.859zm1.224-2.72c-.226.367-.707.487-1.074.261-2.688-1.65-6.786-2.132-9.962-1.168-.413.125-.847-.107-.972-.52-.125-.413.107-.847.52-.972 3.633-1.102 8.147-.565 11.227 1.328.367.226.49.707.261 1.071zm.107-2.822C14.372 8.788 8.52 8.594 5.132 9.622c-.52.158-1.07-.138-1.228-.658-.158-.52.139-1.07.659-1.228 3.896-1.182 10.366-.957 14.453 1.47.47.278.625.889.347 1.359-.278.47-.889.625-1.359.347z" />
               </svg>
             </div>
             <h1 className="text-xl font-bold font-heading text-white m-0">SoundWave</h1>
@@ -26,7 +26,7 @@ export default function Login() {
 
         {/* Login Card */}
         <div className="w-full bg-[#181818]/65 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-10 shadow-2xl animate-fade-in-up text-left">
-          
+
           <div className="mb-6">
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading m-0">
               Sign In
