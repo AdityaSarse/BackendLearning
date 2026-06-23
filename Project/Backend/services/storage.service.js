@@ -1,5 +1,5 @@
 require("dotenv").config();
-const ImageKit = require("@imagekit/nodejs");
+const ImageKit = require("@imagekit/nodejs/index.js");
 
 const imagekit = new ImageKit({
     publicKey: process.env.PUBLIC_KEY,
