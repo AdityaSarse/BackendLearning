@@ -38,6 +38,15 @@ async function uploadMusic(req, res) {
             imageFile: result.imageFile
         })
 
+        // Add music to the album's musics list if the album exists
+        const albumDoc = await albumModel.findOne({ name: album, artist: req.user.id });
+        if (albumDoc) {
+            albumDoc.musics.push(music._id);
+            // Set the album cover to be the newly added song's cover art
+            albumDoc.imageFile = music.imageFile;
+            await albumDoc.save();
+        }
+
         return res.status(201).json({
             message: "Music uploaded successfully",
             music
@@ -103,7 +112,13 @@ async function getAllAlbums(req, res) {
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
         const albums = await albumModel.find()
             .populate("artist", "userName email")
-            .populate("musics")
+            .populate({
+                path: "musics",
+                populate: {
+                    path: "artist",
+                    select: "userName email"
+                }
+            })
             .limit(limit);
         return res.status(200).json({
             message: "Albums retrieved successfully",
@@ -122,7 +137,13 @@ async function getAlbumById(req, res) {
     try {
         const album = await albumModel.findById(req.params.id)
             .populate("artist", "userName email")
-            .populate("musics");
+            .populate({
+                path: "musics",
+                populate: {
+                    path: "artist",
+                    select: "userName email"
+                }
+            });
         if (!album) {
             return res.status(404).json({
                 message: "Album not found"
@@ -140,6 +161,7 @@ async function getAlbumById(req, res) {
         });
     }
 }
+
 
 module.exports = {
     uploadMusic,
