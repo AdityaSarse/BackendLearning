@@ -104,9 +104,21 @@ export default function Dashboard() {
   const [songs, setSongs] = useState([]);
   const [albums, setAlbums] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('home'); // 'home', 'search', 'library'
+  const [activeTab, setActiveTab] = useState('home'); // 'home', 'search', 'library', 'artist'
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Artist tools state
+  const [albumName, setAlbumName] = useState('');
+  const [songTitle, setSongTitle] = useState('');
+  const [selectedAlbumName, setSelectedAlbumName] = useState('');
+  const [songGenre, setSongGenre] = useState('');
+  const [songDuration, setSongDuration] = useState('');
+  const [audioFile, setAudioFile] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+
+  const [uploadingSong, setUploadingSong] = useState(false);
+  const [creatingAlbum, setCreatingAlbum] = useState(false);
 
   // Player States
   const [currentTrack, setCurrentTrack] = useState(null);
@@ -124,50 +136,52 @@ export default function Dashboard() {
   const searchInputRef = useRef(null);
   const profileMenuRef = useRef(null);
 
+  // Role Checker
+  const isArtist = user?.role === 'artist';
+
   // Fetch Music Data
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [musicRes, albumsRes] = await Promise.allSettled([
-          axios.get('/api/music/get-music'),
-          axios.get('/api/music/get-albums')
-        ]);
+  const fetchMusicData = async () => {
+    try {
+      const [musicRes, albumsRes] = await Promise.allSettled([
+        axios.get('/api/music/get-music'),
+        axios.get('/api/music/get-albums')
+      ]);
 
-        let dbSongs = [];
-        let dbAlbums = [];
+      let dbSongs = [];
+      let dbAlbums = [];
 
-        if (musicRes.status === 'fulfilled' && musicRes.value.data?.music) {
-          dbSongs = musicRes.value.data.music;
-        }
-        if (albumsRes.status === 'fulfilled' && albumsRes.value.data?.albums) {
-          dbAlbums = albumsRes.value.data.albums;
-        }
-
-        // Use Database items, fallback to mock data if empty
-        const finalSongs = dbSongs.length > 0 ? dbSongs : FALLBACK_SONGS;
-        const finalAlbums = dbAlbums.length > 0 ? dbAlbums : FALLBACK_ALBUMS;
-
-        setSongs(finalSongs);
-        setAlbums(finalAlbums);
-
-        // Auto-select first track
-        if (finalSongs.length > 0) {
-          setCurrentTrack(finalSongs[0]);
-        }
-      } catch (err) {
-        console.error('Failed to load music, using fallbacks', err);
-        setSongs(FALLBACK_SONGS);
-        setAlbums(FALLBACK_ALBUMS);
-        if (FALLBACK_SONGS.length > 0) {
-          setCurrentTrack(FALLBACK_SONGS[0]);
-        }
-      } finally {
-        setLoading(false);
+      if (musicRes.status === 'fulfilled' && musicRes.value.data?.music) {
+        dbSongs = musicRes.value.data.music;
       }
-    };
+      if (albumsRes.status === 'fulfilled' && albumsRes.value.data?.albums) {
+        dbAlbums = albumsRes.value.data.albums;
+      }
 
-    fetchData();
+      // Use Database items, fallback to mock data if empty
+      const finalSongs = dbSongs.length > 0 ? dbSongs : FALLBACK_SONGS;
+      const finalAlbums = dbAlbums.length > 0 ? dbAlbums : FALLBACK_ALBUMS;
+
+      setSongs(finalSongs);
+      setAlbums(finalAlbums);
+
+      // Set first track if none is active
+      if (finalSongs.length > 0 && !currentTrack) {
+        setCurrentTrack(finalSongs[0]);
+      }
+    } catch (err) {
+      console.error('Failed to load music, using fallbacks', err);
+      setSongs(FALLBACK_SONGS);
+      setAlbums(FALLBACK_ALBUMS);
+      if (FALLBACK_SONGS.length > 0 && !currentTrack) {
+        setCurrentTrack(FALLBACK_SONGS[0]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMusicData();
   }, []);
 
   // Sync Audio playback state
@@ -269,7 +283,7 @@ export default function Dashboard() {
   const handleLikeToggle = (trackId) => {
     setLikedTracks((prev) => ({
       ...prev,
-      [trackId]: !prev[trackId]
+      [trackId] : !prev[trackId]
     }));
     dispatch(showToast({
       message: likedTracks[trackId] ? 'Removed from Liked Songs.' : 'Added to Liked Songs!',
@@ -280,6 +294,81 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     dispatch(logoutUser());
+  };
+
+  // Artist console submissions
+  const handleCreateAlbum = async (e) => {
+    e.preventDefault();
+    if (!albumName.trim()) {
+      dispatch(showToast({ message: 'Album name is required.', type: 'error' }));
+      return;
+    }
+
+    try {
+      setCreatingAlbum(true);
+      await axios.post('/api/music/create-album', { name: albumName });
+      dispatch(showToast({ message: 'Album created successfully!', type: 'success' }));
+      setAlbumName('');
+      await fetchMusicData(); // Refresh albums
+    } catch (err) {
+      console.error(err);
+      dispatch(showToast({
+        message: err.response?.data?.message || 'Failed to create album. Please try again.',
+        type: 'error'
+      }));
+    } finally {
+      setCreatingAlbum(false);
+    }
+  };
+
+  const handleUploadMusic = async (e) => {
+    e.preventDefault();
+
+    if (!songTitle.trim() || !selectedAlbumName || !songGenre.trim() || !songDuration || !audioFile || !imageFile) {
+      dispatch(showToast({ message: 'Please fill all fields and select files.', type: 'error' }));
+      return;
+    }
+
+    try {
+      setUploadingSong(true);
+      const formData = new FormData();
+      formData.append('title', songTitle);
+      formData.append('album', selectedAlbumName);
+      formData.append('genre', songGenre);
+      formData.append('duration', parseInt(songDuration));
+      formData.append('audioFile', audioFile);
+      formData.append('imageFile', imageFile);
+
+      await axios.post('/api/music/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      dispatch(showToast({ message: 'Music uploaded successfully!', type: 'success' }));
+      
+      // Reset forms
+      setSongTitle('');
+      setSelectedAlbumName('');
+      setSongGenre('');
+      setSongDuration('');
+      setAudioFile(null);
+      setImageFile(null);
+
+      // Reset file input element visuals
+      const fileInputs = document.querySelectorAll('input[type="file"]');
+      fileInputs.forEach((input) => { input.value = ''; });
+
+      await fetchMusicData(); // Refresh music/albums catalog
+    } catch (err) {
+      console.error(err);
+      dispatch(showToast({
+        message: err.response?.data?.message || 'Failed to upload music.',
+        type: 'error'
+      }));
+    } finally {
+      setUploadingSong(false);
+    }
   };
 
   // Helper formats
@@ -298,7 +387,7 @@ export default function Dashboard() {
     return 'Good evening';
   };
 
-  // Filtering songs/albums based on search query
+  // Filter lists
   const filteredSongs = songs.filter((song) => {
     const query = searchQuery.toLowerCase();
     return (
@@ -317,7 +406,11 @@ export default function Dashboard() {
     );
   });
 
-  // Handle outside clicks to close profile menu
+  // Artist specific entries
+  const artistAlbums = albums.filter(a => a.artist?._id === user?.id || a.artist?.email === user?.email);
+  const artistSongs = songs.filter(s => s.artist?._id === user?.id || s.artist?.email === user?.email);
+
+  // Close profile dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
@@ -396,6 +489,21 @@ export default function Dashboard() {
               </svg>
               <span>Your Library</span>
             </button>
+
+            {/* Conditional Artist Tools Button */}
+            {isArtist && (
+              <button
+                onClick={() => { setActiveTab('artist'); }}
+                className={`flex items-center gap-4 text-sm font-bold transition-all px-2 py-1 cursor-pointer mt-1 border-l-2 border-transparent pl-1.5 ${
+                  activeTab === 'artist' ? 'text-spotify-green border-spotify-green' : 'text-spotify-muted hover:text-white'
+                }`}
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+                <span>Artist Console</span>
+              </button>
+            )}
           </nav>
 
           {/* Quick Actions */}
@@ -610,14 +718,12 @@ export default function Dashboard() {
                       }}
                       className="bg-[#181818]/60 hover:bg-[#282828]/60 p-4 rounded-lg transition-all duration-300 group cursor-pointer relative shadow-md border border-white/5"
                     >
-                      {/* Album Cover Art */}
                       <div className="relative aspect-square mb-4 shadow-lg overflow-hidden rounded-md">
                         <img
                           src={album.imageFile}
                           alt={album.name}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                        {/* Play button overlay */}
                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end p-3">
                           <button className="w-11 h-11 rounded-full bg-spotify-green flex items-center justify-center text-black shadow-2xl scale-95 group-hover:scale-100 active:scale-90 transition-all duration-300">
                             <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
@@ -636,11 +742,7 @@ export default function Dashboard() {
               {/* Recommended Tracks Section */}
               <div>
                 <h2 className="text-2xl font-bold font-heading text-white tracking-wide mb-4">Recommended Songs</h2>
-                
-                {/* Tracklist Table */}
                 <div className="w-full flex flex-col bg-black/20 rounded-lg p-2 border border-white/5">
-                  
-                  {/* Table Header */}
                   <div className="grid grid-cols-12 gap-4 text-xs font-semibold uppercase tracking-wider text-spotify-muted border-b border-white/10 px-4 py-2 select-none">
                     <span className="col-span-1 text-center">#</span>
                     <span className="col-span-5 text-left">Title</span>
@@ -653,7 +755,6 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  {/* Tracks Rows */}
                   <div className="flex flex-col mt-2.5">
                     {songs.slice(0, 5).map((song, idx) => {
                       const isCurrent = currentTrack?._id === song._id;
@@ -665,10 +766,8 @@ export default function Dashboard() {
                             isCurrent ? 'bg-white/5' : ''
                           }`}
                         >
-                          {/* Play/Index Col */}
                           <div className="col-span-1 text-center font-semibold text-spotify-muted flex items-center justify-center">
                             {isCurrent && isPlaying ? (
-                              /* Sound wave animation */
                               <div className="flex gap-0.5 items-end h-3">
                                 <div className="w-0.5 h-full bg-spotify-green origin-bottom animate-eq-bar-1"></div>
                                 <div className="w-0.5 h-full bg-spotify-green origin-bottom animate-eq-bar-3"></div>
@@ -686,7 +785,6 @@ export default function Dashboard() {
                             )}
                           </div>
 
-                          {/* Info Title/Artist Col */}
                           <div className="col-span-5 flex items-center gap-3">
                             <img src={song.imageFile} alt={song.title} className="w-10 h-10 object-cover rounded shadow-md shrink-0" />
                             <div className="flex flex-col min-w-0">
@@ -699,13 +797,9 @@ export default function Dashboard() {
                             </div>
                           </div>
 
-                          {/* Album Col */}
                           <span className="col-span-3 text-spotify-muted truncate text-left">{song.album || 'Single'}</span>
-                          
-                          {/* Genre Col */}
                           <span className="col-span-2 text-spotify-muted truncate text-left">{song.genre}</span>
 
-                          {/* Time / Hover Heart Col */}
                           <div className="col-span-1 flex items-center justify-end gap-3 text-right">
                             <button
                               type="button"
@@ -735,7 +829,6 @@ export default function Dashboard() {
                       );
                     })}
                   </div>
-
                 </div>
               </div>
 
@@ -757,9 +850,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Filtering logic fallback */}
               {filteredSongs.length === 0 && filteredAlbums.length === 0 ? (
-                /* No Results Placeholder */
                 <div className="flex flex-col items-center justify-center py-20 text-center select-none">
                   <div className="w-16 h-16 bg-neutral-800 rounded-full flex items-center justify-center text-neutral-500 mb-4">
                     <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -773,13 +864,11 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-8">
-                  
-                  {/* Songs Results List */}
                   {filteredSongs.length > 0 && (
                     <div>
                       <h2 className="text-xl font-bold text-white tracking-wide mb-4">Songs</h2>
                       <div className="flex flex-col bg-black/20 rounded-lg p-2 border border-white/5">
-                        {filteredSongs.map((song, idx) => {
+                        {filteredSongs.map((song) => {
                           const isCurrent = currentTrack?._id === song._id;
                           return (
                             <div
@@ -844,7 +933,6 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {/* Album Results */}
                   {filteredAlbums.length > 0 && (
                     <div>
                       <h2 className="text-xl font-bold text-white tracking-wide mb-4">Albums</h2>
@@ -866,7 +954,6 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                  
                 </div>
               )}
             </div>
@@ -885,9 +972,7 @@ export default function Dashboard() {
                 </p>
               </div>
 
-              {/* Liked songs subset */}
               {Object.keys(likedTracks).filter(k => likedTracks[k]).length === 0 ? (
-                /* Empty Library state */
                 <div className="flex flex-col items-center justify-center py-20 text-center select-none bg-[#181818]/30 rounded-2xl border border-white/5 p-8">
                   <div className="w-16 h-16 bg-gradient-to-br from-indigo-700 to-indigo-400 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg">
                     <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
@@ -952,6 +1037,249 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+
+            </div>
+          )}
+
+          {/* ARTIST TAB (Artist tools tab, only shown if user is an artist) */}
+          {activeTab === 'artist' && isArtist && (
+            <div className="flex flex-col gap-8 animate-fade-in-up">
+              
+              <div className="select-none">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight m-0 font-heading">
+                  Artist Console
+                </h1>
+                <p className="text-sm text-spotify-muted mt-1.5">
+                  Manage your library, create albums, and upload tracks to SoundWave.
+                </p>
+              </div>
+
+              {/* Form Forms Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* Left Form: Create Album */}
+                <div className="lg:col-span-1 bg-[#181818]/60 p-5 rounded-2xl border border-white/5 shadow-xl flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2 font-heading tracking-wide">
+                      Create New Album
+                    </h3>
+                    <p className="text-xs text-spotify-muted mb-4">
+                      Group your upcoming tracks under a unified album release.
+                    </p>
+                    
+                    <form onSubmit={handleCreateAlbum} className="flex flex-col gap-4 text-left">
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="albumName" className="text-xs font-semibold text-white uppercase tracking-wider">
+                          Album Name
+                        </label>
+                        <input
+                          id="albumName"
+                          type="text"
+                          value={albumName}
+                          onChange={(e) => setAlbumName(e.target.value)}
+                          placeholder="e.g. Chill Beats Volume 1"
+                          className="w-full bg-[#282828] text-white text-sm px-4 py-3 rounded-lg border border-transparent focus:border-white/20 focus:outline-none transition-colors duration-200"
+                        />
+                      </div>
+                      
+                      <button
+                        type="submit"
+                        disabled={creatingAlbum}
+                        className="w-full bg-spotify-green hover:bg-[#1fdf64] text-black font-bold py-3.5 rounded-full shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-sm tracking-wide cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {creatingAlbum ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5 text-black" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Creating...</span>
+                          </>
+                        ) : (
+                          <span>Create Album</span>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                </div>
+
+                {/* Right Form: Upload Music */}
+                <div className="lg:col-span-2 bg-[#181818]/60 p-5 rounded-2xl border border-white/5 shadow-xl">
+                  <h3 className="text-lg font-bold text-white mb-2 font-heading tracking-wide">
+                    Upload New Song
+                  </h3>
+                  <p className="text-xs text-spotify-muted mb-4">
+                    Upload your high-definition audio file along with its cover art.
+                  </p>
+
+                  <form onSubmit={handleUploadMusic} className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    
+                    {/* Song Title */}
+                    <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
+                      <label htmlFor="songTitle" className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Song Title
+                      </label>
+                      <input
+                        id="songTitle"
+                        type="text"
+                        value={songTitle}
+                        onChange={(e) => setSongTitle(e.target.value)}
+                        placeholder="e.g. Midnight Walk"
+                        className="w-full bg-[#282828] text-white text-sm px-4 py-3 rounded-lg border border-transparent focus:border-white/20 focus:outline-none transition-colors duration-200"
+                      />
+                    </div>
+
+                    {/* Album Selection Dropdown */}
+                    <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
+                      <label htmlFor="selectedAlbum" className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Select Album
+                      </label>
+                      <select
+                        id="selectedAlbum"
+                        value={selectedAlbumName}
+                        onChange={(e) => setSelectedAlbumName(e.target.value)}
+                        className="w-full bg-[#282828] text-white text-sm px-4 py-3 rounded-lg border border-transparent focus:border-white/20 focus:outline-none transition-colors duration-200 cursor-pointer"
+                      >
+                        <option value="">-- Choose an Album --</option>
+                        {artistAlbums.length > 0 ? (
+                          artistAlbums.map((alb) => (
+                            <option key={alb._id} value={alb.name}>
+                              {alb.name}
+                            </option>
+                          ))
+                        ) : (
+                          // Fallback option in case they have no custom albums
+                          <option value="Single">Single (No Album)</option>
+                        )}
+                      </select>
+                    </div>
+
+                    {/* Genre */}
+                    <div className="flex flex-col gap-1.5 col-span-1">
+                      <label htmlFor="songGenre" className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Genre
+                      </label>
+                      <input
+                        id="songGenre"
+                        type="text"
+                        value={songGenre}
+                        onChange={(e) => setSongGenre(e.target.value)}
+                        placeholder="e.g. Lofi, Pop, Synthwave"
+                        className="w-full bg-[#282828] text-white text-sm px-4 py-3 rounded-lg border border-transparent focus:border-white/20 focus:outline-none transition-colors duration-200"
+                      />
+                    </div>
+
+                    {/* Duration in seconds */}
+                    <div className="flex flex-col gap-1.5 col-span-1">
+                      <label htmlFor="songDuration" className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Duration (seconds)
+                      </label>
+                      <input
+                        id="songDuration"
+                        type="number"
+                        min="1"
+                        value={songDuration}
+                        onChange={(e) => setSongDuration(e.target.value)}
+                        placeholder="e.g. 210"
+                        className="w-full bg-[#282828] text-white text-sm px-4 py-3 rounded-lg border border-transparent focus:border-white/20 focus:outline-none transition-colors duration-200"
+                      />
+                    </div>
+
+                    {/* Audio File File-Selector */}
+                    <div className="flex flex-col gap-1.5 col-span-1">
+                      <label htmlFor="audioFile" className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Audio File (.mp3)
+                      </label>
+                      <input
+                        id="audioFile"
+                        type="file"
+                        accept="audio/mp3, audio/*"
+                        onChange={(e) => setAudioFile(e.target.files[0])}
+                        className="w-full text-sm text-spotify-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-spotify-green/10 file:text-spotify-green hover:file:bg-spotify-green/20 file:cursor-pointer cursor-pointer py-1.5"
+                      />
+                    </div>
+
+                    {/* Cover Art Image File-Selector */}
+                    <div className="flex flex-col gap-1.5 col-span-1">
+                      <label htmlFor="imageFile" className="text-xs font-semibold text-white uppercase tracking-wider">
+                        Cover Image (.jpg, .png)
+                      </label>
+                      <input
+                        id="imageFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setImageFile(e.target.files[0])}
+                        className="w-full text-sm text-spotify-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-spotify-green/10 file:text-spotify-green hover:file:bg-spotify-green/20 file:cursor-pointer cursor-pointer py-1.5"
+                      />
+                    </div>
+
+                    {/* Submit Song */}
+                    <div className="col-span-2 mt-2">
+                      <button
+                        type="submit"
+                        disabled={uploadingSong}
+                        className="w-full md:w-auto md:px-12 bg-spotify-green hover:bg-[#1fdf64] text-black font-bold py-3.5 rounded-full shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 text-sm tracking-wide cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {uploadingSong ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5 text-black" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Uploading Track...</span>
+                          </>
+                        ) : (
+                          <span>Upload Song</span>
+                        )}
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+
+              </div>
+
+              {/* Artist catalog review */}
+              <div className="flex flex-col gap-4 mt-4">
+                <h3 className="text-xl font-bold text-white tracking-wide font-heading m-0 select-none">
+                  My Releases
+                </h3>
+                
+                {artistSongs.length === 0 ? (
+                  <div className="text-center p-8 bg-[#181818]/30 rounded-2xl border border-white/5 text-spotify-muted select-none">
+                    You haven't uploaded any songs yet. Fill the forms above to start publishing your music!
+                  </div>
+                ) : (
+                  <div className="w-full flex flex-col bg-black/20 rounded-lg p-2 border border-white/5">
+                    
+                    <div className="grid grid-cols-12 gap-4 text-xs font-semibold uppercase tracking-wider text-spotify-muted border-b border-white/10 px-4 py-2 select-none">
+                      <span className="col-span-1 text-center">#</span>
+                      <span className="col-span-6 text-left">Title</span>
+                      <span className="col-span-3 text-left">Album</span>
+                      <span className="col-span-2 text-right">Duration</span>
+                    </div>
+
+                    <div className="flex flex-col mt-2">
+                      {artistSongs.map((song, index) => (
+                        <div
+                          key={song._id}
+                          onClick={() => handleTrackSelect(song)}
+                          className="grid grid-cols-12 gap-4 text-sm px-4 py-2.5 rounded hover:bg-white/10 transition-colors duration-200 cursor-pointer group items-center"
+                        >
+                          <span className="col-span-1 text-center text-spotify-muted">{index + 1}</span>
+                          <div className="col-span-6 flex items-center gap-3">
+                            <img src={song.imageFile} alt={song.title} className="w-10 h-10 object-cover rounded shadow-md shrink-0" />
+                            <span className="font-semibold text-white truncate">{song.title}</span>
+                          </div>
+                          <span className="col-span-3 text-spotify-muted truncate">{song.album || 'Single'}</span>
+                          <span className="col-span-2 text-right text-spotify-muted">{formatTime(song.duration)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                )}
+              </div>
 
             </div>
           )}
@@ -1102,30 +1430,25 @@ export default function Dashboard() {
         {/* Right Side: Volume Controls */}
         <div className="flex items-center justify-end gap-3.5 w-1/3 min-w-[120px]">
           
-          {/* Volume Icon Button */}
           <button
             onClick={handleMuteToggle}
             className="text-spotify-muted hover:text-white hover:scale-105 active:scale-95 transition-transform cursor-pointer"
           >
             {isMuted || volume === 0 ? (
-              /* Mute Icon */
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6L4.5 9H1.5v6h3l4.5 3.75V5.25z" />
               </svg>
             ) : volume < 0.4 ? (
-              /* Low Volume Icon */
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
               </svg>
             ) : (
-              /* High Volume Icon */
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
               </svg>
             )}
           </button>
 
-          {/* Volume Slider */}
           <input
             type="range"
             min="0"
