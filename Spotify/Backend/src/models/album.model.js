@@ -5,6 +5,10 @@ const albumSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    imageFile: {
+        type: String,
+        default: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=300"
+    },
     musics: [
         {
             type: mongoose.Schema.Types.ObjectId,
