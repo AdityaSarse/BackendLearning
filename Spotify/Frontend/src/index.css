@@ -1,111 +1,130 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@import "tailwindcss";
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@theme {
+  --font-sans: 'Inter', 'Poppins', system-ui, sans-serif;
+  --font-heading: 'Poppins', 'Inter', system-ui, sans-serif;
+  
+  --color-spotify-green: #1DB954;
+  --color-spotify-dark: #121212;
+  --color-spotify-card: #181818;
+  --color-spotify-input: #282828;
+  --color-spotify-muted: #B3B3B3;
+  
+  --animate-spin-slow: spin 10s linear infinite;
+  --animate-float-note-1: floatNote1 6s ease-in-out infinite;
+  --animate-float-note-2: floatNote2 7s ease-in-out infinite;
+  --animate-float-note-3: floatNote3 8s ease-in-out infinite;
+  --animate-fade-in-up: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-eq-bar-1: eqBar 1.2s ease-in-out infinite alternate;
+  --animate-eq-bar-2: eqBar 1.6s ease-in-out infinite alternate;
+  --animate-eq-bar-3: eqBar 1.0s ease-in-out infinite alternate;
+  --animate-eq-bar-4: eqBar 1.9s ease-in-out infinite alternate;
+  --animate-eq-bar-5: eqBar 1.4s ease-in-out infinite alternate;
+}
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+@keyframes floatNote1 {
+  0% {
+    transform: translateY(40px) translateX(0px) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  80% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-140px) translateX(-35px) rotate(25deg) scale(1.1);
+    opacity: 0;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+@keyframes floatNote2 {
+  0% {
+    transform: translateY(40px) translateX(0px) rotate(0deg) scale(0.7);
+    opacity: 0;
   }
+  30% {
+    opacity: 0.5;
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateY(-160px) translateX(45px) rotate(-30deg) scale(1);
+    opacity: 0;
+  }
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+@keyframes floatNote3 {
+  0% {
+    transform: translateY(40px) translateX(0px) rotate(0deg) scale(0.9);
+    opacity: 0;
   }
+  15% {
+    opacity: 0.7;
+  }
+  85% {
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-120px) translateX(-15px) rotate(15deg) scale(1.2);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes eqBar {
+  0% {
+    transform: scaleY(0.15);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #121212;
+}
+::-webkit-scrollbar-thumb {
+  background: #282828;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3e3e3e;
 }
 
 body {
+  background-color: #121212;
+  color: #ffffff;
   margin: 0;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
+/* Reset default root wrapper layout to allow full-screen */
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
-}
-
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  border-inline: none !important;
+  padding: 0 !important;
+  display: block !important;
+  min-height: 100vh !important;
 }
